@@ -5,15 +5,37 @@ declare(strict_types=1);
 /**
  * Poultry Farm Management System
  * Database Configuration
+ *
+ * Local:
+ *   XAMPP / MariaDB
+ *
+ * Production:
+ *   Render + Aiven MySQL
  */
 
-$host = '127.0.0.1';
-$db   = 'poultry_farm';
-$user = 'root';
-$pass = '';
+// ------------------------------------------------------------
+// Database settings
+// ------------------------------------------------------------
+
+$host = getenv('DB_HOST') ?: '127.0.0.1';
+$port = getenv('DB_PORT') ?: '3306';
+$db   = getenv('DB_NAME') ?: 'poultry_farm';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASSWORD') ?: '';
+
 $charset = 'utf8mb4';
 
-$dsn = "mysql:host={$host};dbname={$db};charset={$charset}";
+
+// ------------------------------------------------------------
+// Build DSN
+// ------------------------------------------------------------
+
+$dsn = "mysql:host={$host};port={$port};dbname={$db};charset={$charset}";
+
+
+// ------------------------------------------------------------
+// PDO options
+// ------------------------------------------------------------
 
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -22,13 +44,28 @@ $options = [
 ];
 
 
-try {
+// ------------------------------------------------------------
+// Aiven SSL configuration
+// ------------------------------------------------------------
 
-    /*
-    |--------------------------------------------------------------------------
-    | Create Database Connection
-    |--------------------------------------------------------------------------
-    */
+$sslCa = getenv('DB_SSL_CA');
+
+if ($sslCa) {
+
+    // Render Secret Files are mounted under /etc/secrets/
+    if (is_file($sslCa)) {
+
+        $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+
+    }
+}
+
+
+// ------------------------------------------------------------
+// Connect to database
+// ------------------------------------------------------------
+
+try {
 
     $pdo = new PDO(
         $dsn,
@@ -37,88 +74,14 @@ try {
         $options
     );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Load Farm Timezone
-    |--------------------------------------------------------------------------
-    |
-    | The timezone is stored in farm_settings.
-    | We read it once when the database connection is created.
-    |
-    */
-
-    $timezone = 'Africa/Accra';
-
-
-    try {
-
-        $stmt = $pdo->query("
-            SELECT timezone
-            FROM farm_settings
-            ORDER BY id ASC
-            LIMIT 1
-        ");
-
-        $farmTimezone = $stmt->fetchColumn();
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validate Timezone
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            is_string($farmTimezone)
-            &&
-            $farmTimezone !== ''
-            &&
-            in_array(
-                $farmTimezone,
-                timezone_identifiers_list(),
-                true
-            )
-        ) {
-
-            $timezone = $farmTimezone;
-
-        }
-
-    } catch (Throwable $e) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Fallback
-        |--------------------------------------------------------------------------
-        |
-        | If farm_settings does not exist or cannot be read,
-        | continue using Africa/Accra.
-        |
-        */
-
-        $timezone = 'Africa/Accra';
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Apply Farm Timezone
-    |--------------------------------------------------------------------------
-    */
-
-    date_default_timezone_set(
-        $timezone
-    );
-
-
 } catch (PDOException $e) {
 
     error_log(
+        'Database connection failed: ' .
         $e->getMessage()
     );
 
     die(
-        'Database connection failed. Please check your MySQL server and configuration.'
+        'Database connection failed. Please check the database configuration.'
     );
 }
