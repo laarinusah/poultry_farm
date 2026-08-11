@@ -1,0 +1,20 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Aiven / TLS certificates
+*.pem
+*.key
+*.crt
+
+# Database backups
+*.sql
+
+# Local development
+storage/logs/
+storage/cache/
+
+# Operating system
+.DS_Store
+Thumbs.db
