@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 declare(strict_types=1);
 
@@ -83,7 +83,7 @@ require_once __DIR__ . '/../config/app.php';
             <button
                 class="menu-toggle"
                 id="menuToggle"
-                type="button"
+                onclick="document.getElementById('sidebar').classList.toggle('mobile-open');" type="button"
                 aria-label="Open navigation menu"
                 aria-expanded="false"
             >
