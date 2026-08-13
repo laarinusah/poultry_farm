@@ -7,7 +7,6 @@ require_once __DIR__ . '/../config/app.php';
 ?>
 
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -28,7 +27,6 @@ require_once __DIR__ . '/../config/app.php';
         <?= e($pageTitle ?? APP_NAME) ?>
     </title>
 
-
     <!-- ==========================================================
          BOOTSTRAP ICONS
     =========================================================== -->
@@ -37,7 +35,6 @@ require_once __DIR__ . '/../config/app.php';
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     >
-
 
     <!-- ==========================================================
          APPLICATION CSS
@@ -50,12 +47,9 @@ require_once __DIR__ . '/../config/app.php';
 
 </head>
 
-
 <body>
 
-
 <div class="app-layout">
-
 
     <!-- ==========================================================
          SIDEBAR
@@ -63,13 +57,11 @@ require_once __DIR__ . '/../config/app.php';
 
     <?php require __DIR__ . '/sidebar.php'; ?>
 
-
     <!-- ==========================================================
          MAIN CONTENT
     =========================================================== -->
 
     <main class="main-content">
-
 
         <!-- ======================================================
              TOP BAR
@@ -77,18 +69,17 @@ require_once __DIR__ . '/../config/app.php';
 
         <header class="topbar">
 
-
             <!-- Mobile Menu Button -->
 
             <button
-    class="menu-toggle"
-    id="menuToggle"
-    type="button"
-    aria-label="Open navigation menu"
-    aria-expanded="false"
->
-    <i class="bi bi-list"></i>
-           </button>
+                type="button"
+                class="menu-toggle"
+                id="menuToggle"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+            >
+                <i class="bi bi-list" aria-hidden="true"></i>
+            </button>
 
             <!-- Page Title -->
 
@@ -100,7 +91,6 @@ require_once __DIR__ . '/../config/app.php';
 
             </div>
 
-
             <!-- Current User -->
 
             <div class="user-menu">
@@ -109,23 +99,16 @@ require_once __DIR__ . '/../config/app.php';
                     class="user-icon"
                     aria-hidden="true"
                 >
-
                     <i class="bi bi-person-circle"></i>
-
                 </span>
 
-
                 <span>
-
                     <?= e($_SESSION['full_name'] ?? 'User') ?>
-
                 </span>
 
             </div>
 
-
         </header>
-
 
         <!-- ======================================================
              PAGE CONTENT

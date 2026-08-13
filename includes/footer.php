@@ -13,7 +13,8 @@
 
 </div>
 
-<script src="../public/assets/js/app.js?v=3"></script>
+<script src="../public/assets/js/app.js?v=4"></script>
+
 </body>
 
 </html>
