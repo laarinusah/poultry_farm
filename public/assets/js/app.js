@@ -1,32 +1,22 @@
-document.addEventListener('DOMContentLoaded', function () {
-
-    const menuToggle = document.getElementById('menuToggle');
+function toggleMobileMenu() {
     const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menuToggle');
 
-    if (!menuToggle || !sidebar) {
-        console.log('Mobile menu elements not found.');
+    if (!sidebar || !menuToggle) {
         return;
     }
 
-    menuToggle.addEventListener('click', function (event) {
+    const isOpen = sidebar.classList.toggle('mobile-open');
 
-        event.preventDefault();
-        event.stopPropagation();
+    menuToggle.setAttribute(
+        'aria-expanded',
+        isOpen ? 'true' : 'false'
+    );
 
-        const isOpen = sidebar.classList.toggle('mobile-open');
-
-        menuToggle.setAttribute(
-            'aria-expanded',
-            isOpen ? 'true' : 'false'
-        );
-
-        menuToggle.setAttribute(
-            'aria-label',
-            isOpen
-                ? 'Close navigation menu'
-                : 'Open navigation menu'
-        );
-
-    });
-
-});
+    menuToggle.setAttribute(
+        'aria-label',
+        isOpen
+            ? 'Close navigation menu'
+            : 'Open navigation menu'
+    );
+}

@@ -72,14 +72,15 @@ require_once __DIR__ . '/../config/app.php';
             <!-- Mobile Menu Button -->
 
             <button
-                type="button"
-                class="menu-toggle"
-                id="menuToggle"
-                aria-label="Open navigation menu"
-                aria-expanded="false"
-            >
-                <i class="bi bi-list" aria-hidden="true"></i>
-            </button>
+    type="button"
+    class="menu-toggle"
+    id="menuToggle"
+    aria-label="Open navigation menu"
+    aria-expanded="false"
+    onclick="toggleMobileMenu()"
+>
+        <i class="bi bi-list" aria-hidden="true"></i>
+              </button>
 
             <!-- Page Title -->
 
