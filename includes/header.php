@@ -81,17 +81,14 @@ require_once __DIR__ . '/../config/app.php';
             <!-- Mobile Menu Button -->
 
             <button
-                class="menu-toggle"
-                id="menuToggle"
-                onclick="document.getElementById('sidebar').classList.toggle('mobile-open');" type="button"
-                aria-label="Open navigation menu"
-                aria-expanded="false"
-            >
-
-                <i class="bi bi-list"></i>
-
-            </button>
-
+    class="menu-toggle"
+    id="menuToggle"
+    type="button"
+    aria-label="Open navigation menu"
+    aria-expanded="false"
+>
+    <i class="bi bi-list"></i>
+</button>
 
             <!-- Page Title -->
 

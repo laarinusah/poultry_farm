@@ -2,10 +2,17 @@ function setupMobileMenu() {
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
 
-    if (!menuToggle || !sidebar) return;
+    if (!menuToggle || !sidebar) {
+        return;
+    }
 
     menuToggle.addEventListener('click', function () {
-        sidebar.classList.toggle('mobile-open');
+        const isOpen = sidebar.classList.toggle('mobile-open');
+
+        menuToggle.setAttribute(
+            'aria-expanded',
+            isOpen ? 'true' : 'false'
+        );
     });
 }
 
