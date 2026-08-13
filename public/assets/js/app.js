@@ -13,6 +13,11 @@ function setupMobileMenu() {
             'aria-expanded',
             isOpen ? 'true' : 'false'
         );
+
+        menuToggle.setAttribute(
+            'aria-label',
+            isOpen ? 'Close navigation menu' : 'Open navigation menu'
+        );
     });
 }
 
