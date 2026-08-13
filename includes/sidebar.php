@@ -45,7 +45,7 @@ function sidebarActive(string $section): string
     <div class="sidebar-brand">
 
         <div class="brand-icon">
-            🐔
+            <i class="bi bi-feather"></i>
         </div>
 
         <div>
@@ -79,13 +79,15 @@ function sidebarActive(string $section): string
         </div>
 
 
+        <!-- Dashboard -->
+
         <a
             href="../dashboard/index.php"
             class="<?= sidebarActive('/dashboard/') ?>"
         >
 
             <span>
-                🏠
+                <i class="bi bi-house-door"></i>
             </span>
 
             <span>
@@ -112,7 +114,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                🐔
+                <i class="bi bi-layers"></i>
             </span>
 
             <span>
@@ -130,7 +132,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                🌾
+                <i class="bi bi-basket"></i>
             </span>
 
             <span>
@@ -148,7 +150,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                🌾
+                <i class="bi bi-basket2"></i>
             </span>
 
             <span>
@@ -166,7 +168,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                🥚
+                <i class="bi bi-egg"></i>
             </span>
 
             <span>
@@ -184,7 +186,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                💰
+                <i class="bi bi-cash-stack"></i>
             </span>
 
             <span>
@@ -202,7 +204,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                💀
+                <i class="bi bi-exclamation-triangle"></i>
             </span>
 
             <span>
@@ -220,7 +222,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                💸
+                <i class="bi bi-wallet2"></i>
             </span>
 
             <span>
@@ -247,7 +249,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                📊
+                <i class="bi bi-bar-chart"></i>
             </span>
 
             <span>
@@ -274,7 +276,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                👥
+                <i class="bi bi-people"></i>
             </span>
 
             <span>
@@ -292,7 +294,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                ⚙️
+                <i class="bi bi-gear"></i>
             </span>
 
             <span>
@@ -316,7 +318,7 @@ function sidebarActive(string $section): string
         >
 
             <span>
-                🚪
+                <i class="bi bi-box-arrow-right"></i>
             </span>
 
             <span>

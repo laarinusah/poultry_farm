@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -27,6 +28,21 @@ require_once __DIR__ . '/../config/app.php';
         <?= e($pageTitle ?? APP_NAME) ?>
     </title>
 
+
+    <!-- ==========================================================
+         BOOTSTRAP ICONS
+    =========================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+
+    <!-- ==========================================================
+         APPLICATION CSS
+    =========================================================== -->
+
     <link
         rel="stylesheet"
         href="../public/assets/css/app.css"
@@ -34,23 +50,50 @@ require_once __DIR__ . '/../config/app.php';
 
 </head>
 
+
 <body>
+
 
 <div class="app-layout">
 
+
+    <!-- ==========================================================
+         SIDEBAR
+    =========================================================== -->
+
     <?php require __DIR__ . '/sidebar.php'; ?>
+
+
+    <!-- ==========================================================
+         MAIN CONTENT
+    =========================================================== -->
 
     <main class="main-content">
 
+
+        <!-- ======================================================
+             TOP BAR
+        ======================================================= -->
+
         <header class="topbar">
+
+
+            <!-- Mobile Menu Button -->
 
             <button
                 class="menu-toggle"
                 id="menuToggle"
                 type="button"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
             >
-                ☰
+
+                <i class="bi bi-list"></i>
+
             </button>
+
+
+            <!-- Page Title -->
 
             <div class="topbar-title">
 
@@ -60,18 +103,35 @@ require_once __DIR__ . '/../config/app.php';
 
             </div>
 
+
+            <!-- Current User -->
+
             <div class="user-menu">
 
-                <span class="user-icon">
-                    👤
+                <span
+                    class="user-icon"
+                    aria-hidden="true"
+                >
+
+                    <i class="bi bi-person-circle"></i>
+
                 </span>
 
+
                 <span>
+
                     <?= e($_SESSION['full_name'] ?? 'User') ?>
+
                 </span>
 
             </div>
 
+
         </header>
+
+
+        <!-- ======================================================
+             PAGE CONTENT
+        ======================================================= -->
 
         <div class="page-content">

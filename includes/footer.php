@@ -3,7 +3,7 @@
         <footer class="footer">
 
             <p>
-                © <?= date('Y') ?>
+                &copy; <?= date('Y') ?>
                 Poultry Farm Management System
             </p>
 
@@ -13,8 +13,7 @@
 
 </div>
 
-<script src="../public/assets/js/app.js"></script>
-
+<script src="../public/assets/js/app.js?v=3"></script>
 </body>
 
 </html>
