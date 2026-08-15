@@ -39,7 +39,7 @@ if (!$record) {
 
 /*
 |--------------------------------------------------------------------------
-| Get Active Batches
+| Get Poultry Batches
 |--------------------------------------------------------------------------
 */
 
@@ -48,10 +48,9 @@ $stmt = $pdo->query("
         id,
         batch_name,
         bird_type,
-        current_quantity
+        current_quantity,
+        status
     FROM poultry_batches
-    WHERE status = 'active'
-       OR id = {$record['batch_id']}
     ORDER BY batch_name ASC
 ");
 
@@ -74,7 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         FILTER_VALIDATE_INT
     );
 
-    $productionDate = $_POST['production_date'] ?? '';
+    $productionDate = trim(
+        $_POST['production_date'] ?? ''
+    );
 
     $eggsCollected = filter_input(
         INPUT_POST,
@@ -88,8 +89,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         FILTER_VALIDATE_INT
     );
 
-    $notes = trim($_POST['notes'] ?? '');
+    $notes = trim(
+        $_POST['notes'] ?? ''
+    );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation
+    |--------------------------------------------------------------------------
+    */
 
     if (!$batchId) {
         $errors[] = 'Please select a poultry batch.';
@@ -104,7 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $eggsCollected === null ||
         $eggsCollected < 0
     ) {
-        $errors[] = 'Eggs collected must be zero or greater.';
+        $errors[] =
+            'Eggs collected must be zero or greater.';
     }
 
     if (
@@ -112,7 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $brokenEggs === null ||
         $brokenEggs < 0
     ) {
-        $errors[] = 'Broken eggs must be zero or greater.';
+        $errors[] =
+            'Broken eggs must be zero or greater.';
     }
 
     if (
@@ -122,7 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $brokenEggs !== null &&
         $brokenEggs > $eggsCollected
     ) {
-        $errors[] = 'Broken eggs cannot be greater than eggs collected.';
+        $errors[] =
+            'Broken eggs cannot be greater than eggs collected.';
     }
 
 
@@ -132,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-    if (!$errors) {
+    if (empty($errors)) {
 
         $stmt = $pdo->prepare("
             SELECT id
@@ -141,21 +153,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             LIMIT 1
         ");
 
-        $stmt->execute([$batchId]);
+        $stmt->execute([
+            $batchId
+        ]);
 
         if (!$stmt->fetch()) {
-            $errors[] = 'Selected poultry batch does not exist.';
+
+            $errors[] =
+                'Selected poultry batch does not exist.';
         }
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Prevent Duplicate Date
+    | Prevent Duplicate Production Record
     |--------------------------------------------------------------------------
     */
 
-    if (!$errors) {
+    if (empty($errors)) {
 
         $stmt = $pdo->prepare("
             SELECT id
@@ -173,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         if ($stmt->fetch()) {
+
             $errors[] =
                 'A production record already exists for this batch on this date.';
         }
@@ -185,18 +202,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-    if (!$errors) {
+    if (empty($errors)) {
 
         $stmt = $pdo->prepare("
             UPDATE egg_production
-
             SET
                 batch_id = ?,
                 production_date = ?,
                 eggs_collected = ?,
                 broken_eggs = ?,
                 notes = ?
-
             WHERE id = ?
         ");
 
@@ -205,11 +220,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $productionDate,
             $eggsCollected,
             $brokenEggs,
-            $notes ?: null,
+            $notes !== ''
+                ? $notes
+                : null,
             $id
         ]);
 
-        redirect('view.php?id=' . $id);
+
+        redirect(
+            'view.php?id=' . $id
+        );
     }
 }
 
@@ -220,23 +240,27 @@ require_once __DIR__ . '/../includes/header.php';
 
 ?>
 
+
 <div class="page-header">
 
     <div>
 
-        <h2>✏️ Edit Egg Production</h2>
+        <h2>
+            Edit Egg Production
+        </h2>
 
         <p>
-            Update this production record.
+            Update this egg production record.
         </p>
 
     </div>
+
 
     <a
         href="view.php?id=<?= (int) $id ?>"
         class="btn btn-secondary"
     >
-        ← Back
+        Back
     </a>
 
 </div>
@@ -244,17 +268,22 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="dashboard-card">
 
+
     <?php if (!empty($errors)): ?>
 
         <div class="alert alert-danger">
 
-            <strong>Please correct the following:</strong>
+            <strong>
+                Please correct the following:
+            </strong>
 
             <ul>
 
                 <?php foreach ($errors as $error): ?>
 
-                    <li><?= e($error) ?></li>
+                    <li>
+                        <?= e($error) ?>
+                    </li>
 
                 <?php endforeach; ?>
 
@@ -268,6 +297,9 @@ require_once __DIR__ . '/../includes/header.php';
     <form method="POST">
 
         <div class="form-grid">
+
+
+            <!-- Poultry Batch -->
 
             <div class="form-group">
 
@@ -285,22 +317,53 @@ require_once __DIR__ . '/../includes/header.php';
                         Select batch
                     </option>
 
+
                     <?php foreach ($batches as $batch): ?>
+
+                        <?php
+
+                        $selectedBatch =
+                            $_POST['batch_id']
+                            ?? $record['batch_id'];
+
+                        ?>
 
                         <option
                             value="<?= (int) $batch['id'] ?>"
                             <?= (
-                                ($_POST['batch_id'] ?? $record['batch_id'])
-                                == $batch['id']
-                            ) ? 'selected' : '' ?>
+                                (string) $selectedBatch
+                                ===
+                                (string) $batch['id']
+                            )
+                                ? 'selected'
+                                : ''
+                            ?>
                         >
 
-                            <?= e($batch['batch_name']) ?>
+                            <?= e(
+                                $batch['batch_name']
+                            ) ?>
 
-                            —
-                            <?= e($batch['bird_type']) ?>
+                            <?php if (
+                                !empty(
+                                    $batch['bird_type']
+                                )
+                            ): ?>
 
-                            (<?= number((int) $batch['current_quantity']) ?> birds)
+                                -
+                                <?= e(
+                                    $batch['bird_type']
+                                ) ?>
+
+                            <?php endif; ?>
+
+                            (
+                            <?= number(
+                                (int)
+                                $batch['current_quantity']
+                            ) ?>
+                            birds
+                            )
 
                         </option>
 
@@ -310,6 +373,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             </div>
 
+
+            <!-- Production Date -->
 
             <div class="form-group">
 
@@ -331,6 +396,8 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
 
 
+            <!-- Eggs Collected -->
+
             <div class="form-group">
 
                 <label for="eggs_collected">
@@ -342,6 +409,7 @@ require_once __DIR__ . '/../includes/header.php';
                     id="eggs_collected"
                     name="eggs_collected"
                     min="0"
+                    step="1"
                     value="<?= e(
                         $_POST['eggs_collected']
                         ?? $record['eggs_collected']
@@ -349,8 +417,14 @@ require_once __DIR__ . '/../includes/header.php';
                     required
                 >
 
+                <small>
+                    Enter the total number of eggs collected.
+                </small>
+
             </div>
 
+
+            <!-- Broken Eggs -->
 
             <div class="form-group">
 
@@ -363,6 +437,7 @@ require_once __DIR__ . '/../includes/header.php';
                     id="broken_eggs"
                     name="broken_eggs"
                     min="0"
+                    step="1"
                     value="<?= e(
                         $_POST['broken_eggs']
                         ?? $record['broken_eggs']
@@ -370,8 +445,55 @@ require_once __DIR__ . '/../includes/header.php';
                     required
                 >
 
+                <small>
+                    Broken eggs cannot exceed eggs collected.
+                </small>
+
             </div>
 
+
+            <!-- Good Eggs -->
+
+            <div class="form-group">
+
+                <label for="good_eggs">
+                    Good Eggs
+                </label>
+
+                <?php
+
+                $displayCollected = (int) (
+                    $_POST['eggs_collected']
+                    ?? $record['eggs_collected']
+                );
+
+                $displayBroken = (int) (
+                    $_POST['broken_eggs']
+                    ?? $record['broken_eggs']
+                );
+
+                $displayGood = max(
+                    0,
+                    $displayCollected - $displayBroken
+                );
+
+                ?>
+
+                <input
+                    type="text"
+                    id="good_eggs"
+                    value="<?= number($displayGood) ?>"
+                    readonly
+                >
+
+                <small>
+                    Eggs collected minus broken eggs.
+                </small>
+
+            </div>
+
+
+            <!-- Notes -->
 
             <div class="form-group form-group-full">
 
@@ -383,6 +505,7 @@ require_once __DIR__ . '/../includes/header.php';
                     id="notes"
                     name="notes"
                     rows="4"
+                    placeholder="Additional notes about this production record..."
                 ><?= e(
                     $_POST['notes']
                     ?? $record['notes']
@@ -394,6 +517,8 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
 
 
+        <!-- Buttons -->
+
         <div class="form-actions">
 
             <a
@@ -402,6 +527,7 @@ require_once __DIR__ . '/../includes/header.php';
             >
                 Cancel
             </a>
+
 
             <button
                 type="submit"
@@ -417,4 +543,76 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<script>
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        const collected =
+            document.getElementById(
+                'eggs_collected'
+            );
+
+        const broken =
+            document.getElementById(
+                'broken_eggs'
+            );
+
+        const good =
+            document.getElementById(
+                'good_eggs'
+            );
+
+
+        function calculateGoodEggs() {
+
+            const collectedValue =
+                parseInt(
+                    collected.value,
+                    10
+                ) || 0;
+
+            const brokenValue =
+                parseInt(
+                    broken.value,
+                    10
+                ) || 0;
+
+
+            const goodValue =
+                Math.max(
+                    0,
+                    collectedValue - brokenValue
+                );
+
+
+            good.value =
+                goodValue.toLocaleString();
+        }
+
+
+        collected.addEventListener(
+            'input',
+            calculateGoodEggs
+        );
+
+        broken.addEventListener(
+            'input',
+            calculateGoodEggs
+        );
+
+
+        calculateGoodEggs();
+
+    }
+);
+
+</script>
+
+
+<?php
+
+require_once __DIR__ . '/../includes/footer.php';
+
+?>

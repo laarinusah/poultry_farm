@@ -3,11 +3,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/functions.php';
 
 requireLogin();
-
 
 /*
 |--------------------------------------------------------------------------
@@ -26,14 +23,10 @@ $stmt = $pdo->query("
         es.payment_method,
         es.notes,
         es.created_at,
-
         pb.batch_name
-
     FROM egg_sales es
-
     LEFT JOIN poultry_batches pb
         ON es.batch_id = pb.id
-
     ORDER BY
         es.sale_date DESC,
         es.id DESC
@@ -41,10 +34,9 @@ $stmt = $pdo->query("
 
 $sales = $stmt->fetchAll();
 
-
 /*
 |--------------------------------------------------------------------------
-| Total Sales
+| Sales Summary
 |--------------------------------------------------------------------------
 */
 
@@ -65,13 +57,11 @@ $totalRevenue = (float) (
     $summary['total_revenue'] ?? 0
 );
 
-
 $pageTitle = 'Egg Sales';
 
 require_once __DIR__ . '/../includes/header.php';
 
 ?>
-
 
 <div class="page-header">
 
@@ -84,7 +74,6 @@ require_once __DIR__ . '/../includes/header.php';
         </p>
 
     </div>
-
 
     <div class="action-buttons">
 
@@ -106,9 +95,7 @@ require_once __DIR__ . '/../includes/header.php';
 ): ?>
 
     <div class="alert alert-success">
-
         ✅ Egg sale deleted successfully.
-
     </div>
 
 <?php endif; ?>
@@ -120,32 +107,31 @@ require_once __DIR__ . '/../includes/header.php';
 ): ?>
 
     <div class="alert alert-success">
-
         ✅ Egg sale updated successfully.
-
     </div>
 
 <?php endif; ?>
 
 
 <?php if (
-    isset($_GET['saved'])
-    && $_GET['saved'] === '1'
+    isset($_GET['success'])
+    && $_GET['success'] === '1'
 ): ?>
 
     <div class="alert alert-success">
-
         ✅ Egg sale recorded successfully.
-
     </div>
 
 <?php endif; ?>
 
 
-<!-- Summary Cards -->
+<!-- ==========================================================
+     SUMMARY CARDS
+=========================================================== -->
 
 <div class="dashboard-grid">
 
+    <!-- Crates Sold -->
 
     <div class="dashboard-card">
 
@@ -154,7 +140,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
 
         <h6>
-            Eggs Sold
+            Crates Sold
         </h6>
 
         <h3>
@@ -162,12 +148,13 @@ require_once __DIR__ . '/../includes/header.php';
         </h3>
 
         <small>
-            Total eggs sold
+            Total crates sold
         </small>
 
     </div>
 
 
+    <!-- Total Revenue -->
 
     <div class="dashboard-card">
 
@@ -184,16 +171,17 @@ require_once __DIR__ . '/../includes/header.php';
         </h3>
 
         <small>
-            Total egg sales revenue
+            Total crate sales revenue
         </small>
 
     </div>
 
-
 </div>
 
 
-<!-- Sales Table -->
+<!-- ==========================================================
+     SALES RECORDS
+=========================================================== -->
 
 <div class="dashboard-card">
 
@@ -214,7 +202,7 @@ require_once __DIR__ . '/../includes/header.php';
 
         <div class="alert alert-info">
 
-            No egg sales have been recorded yet.
+            No crate sales have been recorded yet.
 
             <br><br>
 
@@ -229,7 +217,6 @@ require_once __DIR__ . '/../includes/header.php';
 
     <?php else: ?>
 
-
         <div class="table-responsive">
 
             <table class="table">
@@ -238,41 +225,23 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <tr>
 
-                        <th>
-                            #
-                        </th>
+                        <th>#</th>
 
-                        <th>
-                            Date
-                        </th>
+                        <th>Date</th>
 
-                        <th>
-                            Customer
-                        </th>
+                        <th>Customer</th>
 
-                        <th>
-                            Batch
-                        </th>
+                        <th>Batch</th>
 
-                        <th>
-                            Quantity
-                        </th>
+                        <th>Crates Sold</th>
 
-                        <th>
-                            Unit Price
-                        </th>
+                        <th>Price Per Crate</th>
 
-                        <th>
-                            Total
-                        </th>
+                        <th>Total Revenue</th>
 
-                        <th>
-                            Payment
-                        </th>
+                        <th>Payment</th>
 
-                        <th>
-                            Actions
-                        </th>
+                        <th>Actions</th>
 
                     </tr>
 
@@ -281,9 +250,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                 <tbody>
 
-                    <?php foreach (
-                        $sales as $sale
-                    ): ?>
+                    <?php foreach ($sales as $sale): ?>
 
                         <tr>
 
@@ -293,26 +260,18 @@ require_once __DIR__ . '/../includes/header.php';
 
 
                             <td>
-                                <?= e(
-                                    $sale['sale_date']
-                                ) ?>
+                                <?= e($sale['sale_date']) ?>
                             </td>
 
 
                             <td>
 
                                 <?php if (
-                                    !empty(
-                                        $sale[
-                                            'customer_name'
-                                        ]
-                                    )
+                                    !empty($sale['customer_name'])
                                 ): ?>
 
                                     <?= e(
-                                        $sale[
-                                            'customer_name'
-                                        ]
+                                        $sale['customer_name']
                                     ) ?>
 
                                 <?php else: ?>
@@ -339,12 +298,10 @@ require_once __DIR__ . '/../includes/header.php';
                             <td>
 
                                 <?= number(
-                                    (int) $sale[
-                                        'quantity'
-                                    ]
+                                    (int) $sale['quantity']
                                 ) ?>
 
-                                eggs
+                                crates
 
                             </td>
 
@@ -352,9 +309,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <td>
 
                                 <?= money(
-                                    (float) $sale[
-                                        'unit_price'
-                                    ]
+                                    (float) $sale['unit_price']
                                 ) ?>
 
                             </td>
@@ -365,9 +320,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <strong>
 
                                     <?= money(
-                                        (float) $sale[
-                                            'total_amount'
-                                        ]
+                                        (float) $sale['total_amount']
                                     ) ?>
 
                                 </strong>
@@ -380,6 +333,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <?php
 
                                 $paymentLabels = [
+
                                     'cash' =>
                                         'Cash',
 
@@ -391,19 +345,16 @@ require_once __DIR__ . '/../includes/header.php';
 
                                     'other' =>
                                         'Other'
+
                                 ];
 
                                 $payment =
-                                    $sale[
-                                        'payment_method'
-                                    ] ?? 'cash';
+                                    $sale['payment_method']
+                                    ?? 'cash';
 
                                 echo e(
-                                    $paymentLabels[
-                                        $payment
-                                    ] ?? ucfirst(
-                                        $payment
-                                    )
+                                    $paymentLabels[$payment]
+                                    ?? ucfirst($payment)
                                 );
 
                                 ?>
@@ -413,13 +364,12 @@ require_once __DIR__ . '/../includes/header.php';
 
                             <td>
 
-                                <div
-                                    class="action-buttons"
-                                >
+                                <div class="action-buttons">
 
                                     <a
                                         href="view.php?id=<?= (int) $sale['id'] ?>"
                                         class="btn btn-secondary"
+                                        title="View Sale"
                                     >
                                         👁️
                                     </a>
@@ -428,6 +378,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     <a
                                         href="edit.php?id=<?= (int) $sale['id'] ?>"
                                         class="btn btn-primary"
+                                        title="Edit Sale"
                                     >
                                         ✏️
                                     </a>
@@ -436,6 +387,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     <a
                                         href="delete.php?id=<?= (int) $sale['id'] ?>"
                                         class="btn btn-danger"
+                                        title="Delete Sale"
                                     >
                                         🗑️
                                     </a>
@@ -460,10 +412,13 @@ require_once __DIR__ . '/../includes/header.php';
                         </th>
 
                         <th>
+
                             <?= number(
                                 $totalQuantity
                             ) ?>
-                            eggs
+
+                            crates
+
                         </th>
 
                         <th>
@@ -471,9 +426,11 @@ require_once __DIR__ . '/../includes/header.php';
                         </th>
 
                         <th>
+
                             <?= money(
                                 $totalRevenue
                             ) ?>
+
                         </th>
 
                         <th colspan="2">
@@ -487,7 +444,6 @@ require_once __DIR__ . '/../includes/header.php';
             </table>
 
         </div>
-
 
     <?php endif; ?>
 

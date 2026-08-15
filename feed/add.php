@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -117,61 +115,151 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
 
-        /*
-        | Get logged-in user ID.
-        | Different authentication implementations may use
-        | different session keys, so we check the common ones.
-        */
+        try {
 
-        $recordedBy = null;
+            /*
+            |--------------------------------------------------------------------------
+            | Get Logged-in User
+            |--------------------------------------------------------------------------
+            */
 
-        if (isset($_SESSION['user_id'])) {
-            $recordedBy = (int) $_SESSION['user_id'];
-        } elseif (isset($_SESSION['id'])) {
-            $recordedBy = (int) $_SESSION['id'];
+            $recordedBy = currentUserId();
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Get Batch Name
+            |--------------------------------------------------------------------------
+            */
+
+            $batchStmt = $pdo->prepare("
+                SELECT
+                    batch_name
+                FROM poultry_batches
+                WHERE id = ?
+                LIMIT 1
+            ");
+
+            $batchStmt->execute([
+                $batchId
+            ]);
+
+            $batch = $batchStmt->fetch();
+
+
+            if (!$batch) {
+
+                throw new RuntimeException(
+                    'Selected poultry batch was not found.'
+                );
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Get Feed Type Name
+            |--------------------------------------------------------------------------
+            */
+
+            $feedStmt = $pdo->prepare("
+                SELECT
+                    feed_name,
+                    unit
+                FROM feed_types
+                WHERE id = ?
+                LIMIT 1
+            ");
+
+            $feedStmt->execute([
+                $feedTypeId
+            ]);
+
+            $feedType = $feedStmt->fetch();
+
+
+            if (!$feedType) {
+
+                throw new RuntimeException(
+                    'Selected feed type was not found.'
+                );
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Insert Feed Usage
+            |--------------------------------------------------------------------------
+            */
+
+            $stmt = $pdo->prepare("
+                INSERT INTO feed_usage
+                (
+                    batch_id,
+                    feed_type_id,
+                    usage_date,
+                    quantity,
+                    notes,
+                    recorded_by
+                )
+                VALUES
+                (
+                    :batch_id,
+                    :feed_type_id,
+                    :usage_date,
+                    :quantity,
+                    :notes,
+                    :recorded_by
+                )
+            ");
+
+
+            $stmt->execute([
+                ':batch_id'     => $batchId,
+                ':feed_type_id' => $feedTypeId,
+                ':usage_date'   => $usageDate,
+                ':quantity'     => $quantity,
+                ':notes'        => $notes !== ''
+                    ? $notes
+                    : null,
+                ':recorded_by'  => $recordedBy
+            ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Notify Other Users
+            |--------------------------------------------------------------------------
+            */
+
+            notifyOtherUsers(
+                'New Feed Usage Recorded',
+                sprintf(
+                    '%s recorded %.2f %s of %s feed for batch "%s" on %s.',
+                    $_SESSION['full_name'] ?? 'A user',
+                    $quantity,
+                    $feedType['unit'] ?? 'units',
+                    $feedType['feed_name'],
+                    $batch['batch_name'],
+                    $usageDate
+                ),
+                'feed',
+                'index.php'
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Redirect After Successful Save
+            |--------------------------------------------------------------------------
+            */
+
+            redirect('index.php?success=1');
+
+
+        } catch (Throwable $e) {
+
+            $errors[] = $e->getMessage();
         }
-
-
-        $stmt = $pdo->prepare("
-            INSERT INTO feed_usage
-            (
-                batch_id,
-                feed_type_id,
-                usage_date,
-                quantity,
-                notes,
-                recorded_by
-            )
-            VALUES
-            (
-                :batch_id,
-                :feed_type_id,
-                :usage_date,
-                :quantity,
-                :notes,
-                :recorded_by
-            )
-        ");
-
-
-        $stmt->execute([
-            ':batch_id'     => $batchId,
-            ':feed_type_id' => $feedTypeId,
-            ':usage_date'   => $usageDate,
-            ':quantity'     => $quantity,
-            ':notes'        => $notes !== '' ? $notes : null,
-            ':recorded_by'  => $recordedBy
-        ]);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Redirect After Successful Save
-        |--------------------------------------------------------------------------
-        */
-
-        header('Location: index.php?success=1');
-        exit;
     }
 }
 

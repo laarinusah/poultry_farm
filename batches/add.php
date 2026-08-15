@@ -29,6 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $notes = trim($_POST['notes'] ?? '');
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | Validation
+    |--------------------------------------------------------------------------
+    */
+
     if ($batchName === '') {
         $errors[] = 'Batch name is required.';
     }
@@ -45,49 +51,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Start date is required.';
     }
 
-    if (!in_array($status, ['active', 'sold', 'completed'], true)) {
+    if (!in_array(
+        $status,
+        ['active', 'sold', 'completed'],
+        true
+    )) {
         $errors[] = 'Invalid batch status.';
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | Save Poultry Batch
+    |--------------------------------------------------------------------------
+    */
+
     if (empty($errors)) {
 
-        $stmt = $pdo->prepare("
-            INSERT INTO poultry_batches
-            (
-                batch_name,
-                bird_type,
-                breed,
-                initial_quantity,
-                current_quantity,
-                date_started,
-                expected_sale_date,
-                status,
-                notes,
-                created_by
-            )
-            VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
+        try {
 
-        $stmt->execute([
-            $batchName,
-            $birdType,
-            $breed ?: null,
-            $initialQuantity,
-            $initialQuantity,
-            $dateStarted,
-            $expectedSaleDate ?: null,
-            $status,
-            $notes ?: null,
-            currentUserId()
-        ]);
+            $stmt = $pdo->prepare("
+                INSERT INTO poultry_batches
+                (
+                    batch_name,
+                    bird_type,
+                    breed,
+                    initial_quantity,
+                    current_quantity,
+                    date_started,
+                    expected_sale_date,
+                    status,
+                    notes,
+                    created_by
+                )
+                VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
 
-        redirect('index.php');
 
+            $stmt->execute([
+                $batchName,
+                $birdType,
+                $breed ?: null,
+                $initialQuantity,
+                $initialQuantity,
+                $dateStarted,
+                $expectedSaleDate ?: null,
+                $status,
+                $notes ?: null,
+                currentUserId()
+            ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Notify Other Users
+            |--------------------------------------------------------------------------
+            |
+            | This runs only after the poultry batch has been successfully
+            | inserted into the database.
+            |
+            */
+
+            notifyOtherUsers(
+                'New Poultry Batch Added',
+                sprintf(
+                    '%s added a new %s poultry batch "%s" with %s birds.',
+                    $_SESSION['full_name'] ?? 'A user',
+                    $birdType,
+                    $batchName,
+                    number($initialQuantity)
+                ),
+                'batch',
+                'index.php'
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Redirect After Successful Save
+            |--------------------------------------------------------------------------
+            */
+
+            redirect('index.php');
+
+
+        } catch (Throwable $e) {
+
+            $errors[] =
+                'Unable to save the poultry batch. '
+                . $e->getMessage();
+        }
     }
-
 }
+
 
 require_once __DIR__ . '/../includes/header.php';
 
@@ -121,7 +178,9 @@ require_once __DIR__ . '/../includes/header.php';
 
         <div class="alert alert-danger">
 
-            <strong>Please correct the following:</strong>
+            <strong>
+                Please correct the following:
+            </strong>
 
             <ul>
 
@@ -144,6 +203,9 @@ require_once __DIR__ . '/../includes/header.php';
 
         <div class="form-grid">
 
+
+            <!-- Batch Name -->
+
             <div class="form-group">
 
                 <label for="batch_name">
@@ -155,12 +217,16 @@ require_once __DIR__ . '/../includes/header.php';
                     id="batch_name"
                     name="batch_name"
                     placeholder="e.g. Layers Batch 001"
-                    value="<?= e($_POST['batch_name'] ?? '') ?>"
+                    value="<?= e(
+                        $_POST['batch_name'] ?? ''
+                    ) ?>"
                     required
                 >
 
             </div>
 
+
+            <!-- Bird Type -->
 
             <div class="form-group">
 
@@ -178,19 +244,55 @@ require_once __DIR__ . '/../includes/header.php';
                         Select bird type
                     </option>
 
-                    <option value="Layers">
+                    <option
+                        value="Layers"
+                        <?= (
+                            ($_POST['bird_type'] ?? '')
+                            === 'Layers'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Layers
                     </option>
 
-                    <option value="Broilers">
+                    <option
+                        value="Broilers"
+                        <?= (
+                            ($_POST['bird_type'] ?? '')
+                            === 'Broilers'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Broilers
                     </option>
 
-                    <option value="Cockerels">
+                    <option
+                        value="Cockerels"
+                        <?= (
+                            ($_POST['bird_type'] ?? '')
+                            === 'Cockerels'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Cockerels
                     </option>
 
-                    <option value="Other">
+                    <option
+                        value="Other"
+                        <?= (
+                            ($_POST['bird_type'] ?? '')
+                            === 'Other'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Other
                     </option>
 
@@ -198,6 +300,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             </div>
 
+
+            <!-- Breed -->
 
             <div class="form-group">
 
@@ -210,11 +314,15 @@ require_once __DIR__ . '/../includes/header.php';
                     id="breed"
                     name="breed"
                     placeholder="e.g. ISA Brown"
-                    value="<?= e($_POST['breed'] ?? '') ?>"
+                    value="<?= e(
+                        $_POST['breed'] ?? ''
+                    ) ?>"
                 >
 
             </div>
 
+
+            <!-- Initial Quantity -->
 
             <div class="form-group">
 
@@ -227,12 +335,17 @@ require_once __DIR__ . '/../includes/header.php';
                     id="initial_quantity"
                     name="initial_quantity"
                     min="1"
-                    value="<?= e($_POST['initial_quantity'] ?? '') ?>"
+                    step="1"
+                    value="<?= e(
+                        $_POST['initial_quantity'] ?? ''
+                    ) ?>"
                     required
                 >
 
             </div>
 
+
+            <!-- Start Date -->
 
             <div class="form-group">
 
@@ -244,12 +357,17 @@ require_once __DIR__ . '/../includes/header.php';
                     type="date"
                     id="date_started"
                     name="date_started"
-                    value="<?= e($_POST['date_started'] ?? date('Y-m-d')) ?>"
+                    value="<?= e(
+                        $_POST['date_started']
+                        ?? date('Y-m-d')
+                    ) ?>"
                     required
                 >
 
             </div>
 
+
+            <!-- Expected Sale Date -->
 
             <div class="form-group">
 
@@ -261,11 +379,16 @@ require_once __DIR__ . '/../includes/header.php';
                     type="date"
                     id="expected_sale_date"
                     name="expected_sale_date"
-                    value="<?= e($_POST['expected_sale_date'] ?? '') ?>"
+                    value="<?= e(
+                        $_POST['expected_sale_date']
+                        ?? ''
+                    ) ?>"
                 >
 
             </div>
 
+
+            <!-- Status -->
 
             <div class="form-group">
 
@@ -278,15 +401,42 @@ require_once __DIR__ . '/../includes/header.php';
                     name="status"
                 >
 
-                    <option value="active">
+                    <option
+                        value="active"
+                        <?= (
+                            ($_POST['status'] ?? 'active')
+                            === 'active'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Active
                     </option>
 
-                    <option value="completed">
+                    <option
+                        value="completed"
+                        <?= (
+                            ($_POST['status'] ?? '')
+                            === 'completed'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Completed
                     </option>
 
-                    <option value="sold">
+                    <option
+                        value="sold"
+                        <?= (
+                            ($_POST['status'] ?? '')
+                            === 'sold'
+                        )
+                            ? 'selected'
+                            : ''
+                        ?>
+                    >
                         Sold
                     </option>
 
@@ -294,6 +444,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             </div>
 
+
+            <!-- Notes -->
 
             <div class="form-group form-group-full">
 
@@ -306,12 +458,16 @@ require_once __DIR__ . '/../includes/header.php';
                     name="notes"
                     rows="4"
                     placeholder="Additional notes about this batch..."
-                ><?= e($_POST['notes'] ?? '') ?></textarea>
+                ><?= e(
+                    $_POST['notes'] ?? ''
+                ) ?></textarea>
 
             </div>
 
         </div>
 
+
+        <!-- Buttons -->
 
         <div class="form-actions">
 
@@ -336,4 +492,8 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<?php
+
+require_once __DIR__ . '/../includes/footer.php';
+
+?>

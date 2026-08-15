@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
@@ -12,9 +11,16 @@ $pageTitle = 'Record Egg Production';
 
 $errors = [];
 
+$productionDate = date('Y-m-d');
+$batchId = '';
+$eggsCollected = '';
+$cratesRecorded = '';
+$brokenEggs = '';
+$notes = '';
+
 /*
 |--------------------------------------------------------------------------
-| Get Active Batches
+| Load Active Poultry Batches
 |--------------------------------------------------------------------------
 */
 
@@ -31,159 +37,270 @@ $stmt = $pdo->query("
 
 $batches = $stmt->fetchAll();
 
-
 /*
 |--------------------------------------------------------------------------
-| Save Production
+| Save Egg Production
 |--------------------------------------------------------------------------
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $batchId = filter_input(
-        INPUT_POST,
-        'batch_id',
-        FILTER_VALIDATE_INT
+    $productionDate = trim(
+        $_POST['production_date'] ?? ''
     );
 
-    $productionDate = $_POST['production_date'] ?? '';
-
-    $eggsCollected = filter_input(
-        INPUT_POST,
-        'eggs_collected',
-        FILTER_VALIDATE_INT
+    $batchId = trim(
+        $_POST['batch_id'] ?? ''
     );
 
-    $brokenEggs = filter_input(
-        INPUT_POST,
-        'broken_eggs',
-        FILTER_VALIDATE_INT
+    $eggsCollected = trim(
+        $_POST['eggs_collected'] ?? ''
     );
 
-    $notes = trim($_POST['notes'] ?? '');
+    $cratesRecorded = trim(
+        $_POST['crates_recorded'] ?? ''
+    );
+
+    $brokenEggs = trim(
+        $_POST['broken_eggs'] ?? ''
+    );
+
+    $notes = trim(
+        $_POST['notes'] ?? ''
+    );
 
 
     /*
     |--------------------------------------------------------------------------
-    | Validation
+    | Validate Production Date
     |--------------------------------------------------------------------------
     */
-
-    if (!$batchId) {
-        $errors[] = 'Please select a poultry batch.';
-    }
 
     if ($productionDate === '') {
-        $errors[] = 'Production date is required.';
-    }
 
-    if ($eggsCollected === false || $eggsCollected === null || $eggsCollected < 0) {
-        $errors[] = 'Eggs collected must be zero or greater.';
-    }
-
-    if ($brokenEggs === false || $brokenEggs === null || $brokenEggs < 0) {
-        $errors[] = 'Broken eggs must be zero or greater.';
-    }
-
-    if (
-        $eggsCollected !== false &&
-        $eggsCollected !== null &&
-        $brokenEggs !== false &&
-        $brokenEggs !== null &&
-        $brokenEggs > $eggsCollected
-    ) {
-        $errors[] = 'Broken eggs cannot be greater than eggs collected.';
+        $errors[] =
+            'Production date is required.';
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Verify Batch
+    | Validate Batch
     |--------------------------------------------------------------------------
     */
 
-    if (!$errors) {
+    if (
+        $batchId === ''
+        || !ctype_digit($batchId)
+        || (int) $batchId <= 0
+    ) {
 
-        $stmt = $pdo->prepare("
-            SELECT id
+        $errors[] =
+            'Please select a poultry batch.';
+
+    } else {
+
+        $batchCheck = $pdo->prepare("
+            SELECT
+                id,
+                batch_name
             FROM poultry_batches
-            WHERE id = ?
+            WHERE id = :id
             AND status = 'active'
             LIMIT 1
         ");
 
-        $stmt->execute([$batchId]);
+        $batchCheck->execute([
+            ':id' => (int) $batchId
+        ]);
 
-        if (!$stmt->fetch()) {
-            $errors[] = 'The selected batch does not exist or is not active.';
+        if (!$batchCheck->fetch()) {
+
+            $errors[] =
+                'Selected poultry batch does not exist or is not active.';
         }
-
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Prevent Duplicate Daily Record
+    | Validate Eggs Collected
     |--------------------------------------------------------------------------
     */
 
-    if (!$errors) {
+    if (
+        $eggsCollected === ''
+        || !ctype_digit($eggsCollected)
+        || (int) $eggsCollected < 0
+    ) {
 
-        $stmt = $pdo->prepare("
-            SELECT id
-            FROM egg_production
-            WHERE batch_id = ?
-            AND production_date = ?
-            LIMIT 1
-        ");
-
-        $stmt->execute([
-            $batchId,
-            $productionDate
-        ]);
-
-        if ($stmt->fetch()) {
-            $errors[] = 'A production record already exists for this batch on this date.';
-        }
-
+        $errors[] =
+            'Eggs collected must be zero or greater.';
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Insert
+    | Validate Daily Crates
     |--------------------------------------------------------------------------
     */
 
-    if (!$errors) {
+    if (
+        $cratesRecorded === ''
+        || !ctype_digit($cratesRecorded)
+        || (int) $cratesRecorded < 0
+    ) {
 
-        $stmt = $pdo->prepare("
-            INSERT INTO egg_production
-            (
-                batch_id,
-                production_date,
-                eggs_collected,
-                broken_eggs,
-                notes,
-                recorded_by
-            )
-            VALUES
-            (?, ?, ?, ?, ?, ?)
-        ");
-
-        $stmt->execute([
-            $batchId,
-            $productionDate,
-            $eggsCollected,
-            $brokenEggs,
-            $notes ?: null,
-            currentUserId()
-        ]);
-
-        redirect('index.php');
-
+        $errors[] =
+            'Daily crates must be zero or greater.';
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Broken Eggs
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $brokenEggs === ''
+        || !ctype_digit($brokenEggs)
+        || (int) $brokenEggs < 0
+    ) {
+
+        $errors[] =
+            'Broken eggs must be zero or greater.';
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Broken Eggs Cannot Exceed Eggs Collected
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $eggsCollected !== ''
+        && ctype_digit($eggsCollected)
+        && $brokenEggs !== ''
+        && ctype_digit($brokenEggs)
+    ) {
+
+        if (
+            (int) $brokenEggs >
+            (int) $eggsCollected
+        ) {
+
+            $errors[] =
+                'Broken eggs cannot be greater than eggs collected.';
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Save Production Record
+    |--------------------------------------------------------------------------
+    */
+
+    if (empty($errors)) {
+
+        try {
+
+            $pdo->beginTransaction();
+
+            $recordedBy = currentUserId();
+
+            $stmt = $pdo->prepare("
+                INSERT INTO egg_production (
+                    batch_id,
+                    production_date,
+                    eggs_collected,
+                    crates_recorded,
+                    broken_eggs,
+                    notes,
+                    recorded_by
+                )
+                VALUES (
+                    :batch_id,
+                    :production_date,
+                    :eggs_collected,
+                    :crates_recorded,
+                    :broken_eggs,
+                    :notes,
+                    :recorded_by
+                )
+            ");
+
+            $stmt->execute([
+                ':batch_id' =>
+                    (int) $batchId,
+
+                ':production_date' =>
+                    $productionDate,
+
+                ':eggs_collected' =>
+                    (int) $eggsCollected,
+
+                ':crates_recorded' =>
+                    (int) $cratesRecorded,
+
+                ':broken_eggs' =>
+                    (int) $brokenEggs,
+
+                ':notes' =>
+                    $notes !== ''
+                        ? $notes
+                        : null,
+
+                ':recorded_by' =>
+                    $recordedBy
+            ]);
+
+            $pdo->commit();
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Notify Other Partners
+            |--------------------------------------------------------------------------
+            */
+
+            notifyOtherUsers(
+                'New Egg Production Recorded',
+                sprintf(
+                    '%s recorded %s eggs and %s crates from poultry production.',
+                    $_SESSION['full_name'] ?? 'A user',
+                    number((int) $eggsCollected),
+                    number((int) $cratesRecorded)
+                ),
+                'eggs',
+                'index.php'
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Success
+            |--------------------------------------------------------------------------
+            */
+
+            redirect(
+                'index.php?success=1'
+            );
+
+        } catch (Throwable $e) {
+
+            if ($pdo->inTransaction()) {
+
+                $pdo->rollBack();
+            }
+
+            $errors[] =
+                'Unable to save the egg production record. '
+                . $e->getMessage();
+        }
+    }
 }
 
 require_once __DIR__ . '/../includes/header.php';
@@ -194,221 +311,378 @@ require_once __DIR__ . '/../includes/header.php';
 
     <div>
 
-        <h2>🥚 Record Egg Production</h2>
+        <h2>Record Egg Production</h2>
 
         <p>
-            Enter the daily egg production for a poultry batch.
+            Record the daily egg production from the farm.
         </p>
 
     </div>
 
-    <a
-        href="index.php"
-        class="btn btn-secondary"
+    <div>
+
+        <a
+            href="index.php"
+            class="btn btn-secondary"
+        >
+            Back to Egg Production
+        </a>
+
+    </div>
+
+</div>
+
+
+<?php if (!empty($errors)): ?>
+
+    <div class="alert alert-danger">
+
+        <strong>
+            Please correct the following:
+        </strong>
+
+        <ul>
+
+            <?php foreach ($errors as $error): ?>
+
+                <li>
+                    <?= e($error) ?>
+                </li>
+
+            <?php endforeach; ?>
+
+        </ul>
+
+    </div>
+
+<?php endif; ?>
+
+
+<form
+    method="POST"
+    action=""
+    class="dashboard-card"
+>
+
+    <!-- ==========================================================
+         PRODUCTION DATE
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="production_date">
+            Production Date
+        </label>
+
+        <input
+            type="date"
+            id="production_date"
+            name="production_date"
+            value="<?= e($productionDate) ?>"
+            required
+        >
+
+        <small>
+            Select the date the eggs were collected.
+        </small>
+
+    </div>
+
+
+    <!-- ==========================================================
+         POULTRY BATCH
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="batch_id">
+            Poultry Batch
+        </label>
+
+        <select
+            id="batch_id"
+            name="batch_id"
+            required
+        >
+
+            <option value="">
+                -- Select Poultry Batch --
+            </option>
+
+            <?php foreach ($batches as $batch): ?>
+
+                <option
+                    value="<?= (int) $batch['id'] ?>"
+                    <?= (
+                        (string) $batchId ===
+                        (string) $batch['id']
+                    )
+                        ? 'selected'
+                        : ''
+                    ?>
+                >
+
+                    <?= e($batch['batch_name']) ?>
+
+                    <?php if (!empty($batch['bird_type'])): ?>
+
+                        -
+                        <?= e($batch['bird_type']) ?>
+
+                    <?php endif; ?>
+
+                    (
+                    <?= number(
+                        (int) $batch['current_quantity']
+                    ) ?>
+                    birds
+                    )
+
+                </option>
+
+            <?php endforeach; ?>
+
+        </select>
+
+        <small>
+            Select the poultry batch that produced these eggs.
+        </small>
+
+    </div>
+
+
+    <!-- ==========================================================
+         EGGS COLLECTED
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="eggs_collected">
+            Eggs Collected
+        </label>
+
+        <input
+            type="number"
+            id="eggs_collected"
+            name="eggs_collected"
+            value="<?= e($eggsCollected) ?>"
+            min="0"
+            step="1"
+            placeholder="Enter total eggs collected"
+            required
+        >
+
+        <small>
+            Enter the total number of eggs collected for this production day.
+        </small>
+
+    </div>
+
+
+    <!-- ==========================================================
+         DAILY CRATES
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="crates_recorded">
+            Daily Crates
+        </label>
+
+        <input
+            type="number"
+            id="crates_recorded"
+            name="crates_recorded"
+            value="<?= e($cratesRecorded) ?>"
+            min="0"
+            step="1"
+            placeholder="Enter number of crates"
+            required
+        >
+
+        <small>
+            Enter the number of crates recorded for this production day.
+        </small>
+
+    </div>
+
+
+    <!-- ==========================================================
+         BROKEN EGGS
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="broken_eggs">
+            Broken Eggs
+        </label>
+
+        <input
+            type="number"
+            id="broken_eggs"
+            name="broken_eggs"
+            value="<?= e($brokenEggs) ?>"
+            min="0"
+            step="1"
+            placeholder="Enter number of broken eggs"
+            required
+        >
+
+        <small>
+            Enter the number of eggs damaged or broken.
+        </small>
+
+    </div>
+
+
+    <!-- ==========================================================
+         GOOD EGGS
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="good_eggs">
+            Good Eggs
+        </label>
+
+        <input
+            type="text"
+            id="good_eggs"
+            value="0"
+            readonly
+        >
+
+        <small>
+            Good eggs are calculated automatically:
+            eggs collected minus broken eggs.
+        </small>
+
+    </div>
+
+
+    <!-- ==========================================================
+         NOTES
+    =========================================================== -->
+
+    <div class="form-group">
+
+        <label for="notes">
+            Notes
+        </label>
+
+        <textarea
+            id="notes"
+            name="notes"
+            rows="4"
+            placeholder="Optional notes about this production record"
+        ><?= e($notes) ?></textarea>
+
+    </div>
+
+
+    <!-- ==========================================================
+         BUTTONS
+    =========================================================== -->
+
+    <div
+        class="form-actions"
+        style="
+            display:flex;
+            gap:12px;
+            margin-top:25px;
+            flex-wrap:wrap;
+        "
     >
-        ← Back to Production
-    </a>
 
-</div>
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Save Egg Production
+        </button>
 
+        <a
+            href="index.php"
+            class="btn btn-secondary"
+        >
+            Cancel
+        </a>
 
-<div class="dashboard-card">
+    </div>
 
-    <?php if (!empty($errors)): ?>
+</form>
 
-        <div class="alert alert-danger">
 
-            <strong>Please correct the following:</strong>
+<script>
 
-            <ul>
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
-                <?php foreach ($errors as $error): ?>
+        const collected =
+            document.getElementById(
+                'eggs_collected'
+            );
 
-                    <li>
-                        <?= e($error) ?>
-                    </li>
+        const broken =
+            document.getElementById(
+                'broken_eggs'
+            );
 
-                <?php endforeach; ?>
+        const good =
+            document.getElementById(
+                'good_eggs'
+            );
 
-            </ul>
 
-        </div>
+        function calculateGoodEggs() {
 
-    <?php endif; ?>
+            const collectedValue =
+                parseInt(
+                    collected.value,
+                    10
+                ) || 0;
 
+            const brokenValue =
+                parseInt(
+                    broken.value,
+                    10
+                ) || 0;
 
-    <?php if (empty($batches)): ?>
+            const goodValue =
+                Math.max(
+                    0,
+                    collectedValue -
+                    brokenValue
+                );
 
-        <div class="empty-state">
+            good.value =
+                goodValue.toLocaleString();
+        }
 
-            <div style="font-size: 45px;">
-                🐔
-            </div>
 
-            <h3>No Active Poultry Batches</h3>
+        collected.addEventListener(
+            'input',
+            calculateGoodEggs
+        );
 
-            <p>
-                You need an active poultry batch before recording egg production.
-            </p>
 
-            <a
-                href="../batches/add.php"
-                class="btn btn-primary"
-            >
-                + Add Poultry Batch
-            </a>
+        broken.addEventListener(
+            'input',
+            calculateGoodEggs
+        );
 
-        </div>
 
-    <?php else: ?>
+        calculateGoodEggs();
 
-        <form method="POST">
+    }
+);
 
-            <div class="form-grid">
+</script>
 
-                <!-- Batch -->
 
-                <div class="form-group">
+<?php
 
-                    <label for="batch_id">
-                        Poultry Batch *
-                    </label>
+require_once __DIR__ . '/../includes/footer.php';
 
-                    <select
-                        id="batch_id"
-                        name="batch_id"
-                        required
-                    >
-
-                        <option value="">
-                            Select batch
-                        </option>
-
-                        <?php foreach ($batches as $batch): ?>
-
-                            <option
-                                value="<?= (int) $batch['id'] ?>"
-                                <?= (($_POST['batch_id'] ?? '') == $batch['id']) ? 'selected' : '' ?>
-                            >
-
-                                <?= e($batch['batch_name']) ?>
-
-                                —
-                                <?= e($batch['bird_type']) ?>
-
-                                (<?= number((int) $batch['current_quantity']) ?> birds)
-
-                            </option>
-
-                        <?php endforeach; ?>
-
-                    </select>
-
-                </div>
-
-
-                <!-- Date -->
-
-                <div class="form-group">
-
-                    <label for="production_date">
-                        Production Date *
-                    </label>
-
-                    <input
-                        type="date"
-                        id="production_date"
-                        name="production_date"
-                        value="<?= e($_POST['production_date'] ?? date('Y-m-d')) ?>"
-                        required
-                    >
-
-                </div>
-
-
-                <!-- Eggs -->
-
-                <div class="form-group">
-
-                    <label for="eggs_collected">
-                        Eggs Collected *
-                    </label>
-
-                    <input
-                        type="number"
-                        id="eggs_collected"
-                        name="eggs_collected"
-                        min="0"
-                        value="<?= e($_POST['eggs_collected'] ?? '') ?>"
-                        required
-                    >
-
-                </div>
-
-
-                <!-- Broken -->
-
-                <div class="form-group">
-
-                    <label for="broken_eggs">
-                        Broken Eggs *
-                    </label>
-
-                    <input
-                        type="number"
-                        id="broken_eggs"
-                        name="broken_eggs"
-                        min="0"
-                        value="<?= e($_POST['broken_eggs'] ?? '0') ?>"
-                        required
-                    >
-
-                </div>
-
-
-                <!-- Notes -->
-
-                <div class="form-group form-group-full">
-
-                    <label for="notes">
-                        Notes
-                    </label>
-
-                    <textarea
-                        id="notes"
-                        name="notes"
-                        rows="4"
-                        placeholder="Enter any notes about today's production..."
-                    ><?= e($_POST['notes'] ?? '') ?></textarea>
-
-                </div>
-
-            </div>
-
-
-            <div class="form-actions">
-
-                <a
-                    href="index.php"
-                    class="btn btn-secondary"
-                >
-                    Cancel
-                </a>
-
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                >
-                    Save Production
-                </button>
-
-            </div>
-
-        </form>
-
-    <?php endif; ?>
-
-</div>
-
-
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+?>

@@ -1,7 +1,4 @@
 <?php
-
-declare(strict_types=1);
-
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -10,63 +7,36 @@ requireLogin();
 
 $error = '';
 
-/*
-|--------------------------------------------------------------------------
-| Handle Form Submission
-|--------------------------------------------------------------------------
-*/
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $expenseDate = $_POST['expense_date'] ?? '';
+    $expenseDate = trim($_POST['expense_date'] ?? '');
     $category = trim($_POST['category'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $amount = $_POST['amount'] ?? '';
     $paymentMethod = $_POST['payment_method'] ?? 'cash';
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Validation
-    |--------------------------------------------------------------------------
-    */
-
     if ($expenseDate === '') {
-
         $error = 'Please select the expense date.';
 
     } elseif ($category === '') {
-
         $error = 'Please enter the expense category.';
 
     } elseif ($description === '') {
-
         $error = 'Please enter a description.';
 
     } elseif (!is_numeric($amount) || (float)$amount <= 0) {
-
         $error = 'Please enter a valid expense amount.';
 
-    } elseif (
-        !in_array(
-            $paymentMethod,
-            ['cash', 'mobile_money', 'bank', 'other'],
-            true
-        )
-    ) {
-
+    } elseif (!in_array(
+        $paymentMethod,
+        ['cash', 'mobile_money', 'bank', 'other'],
+        true
+    )) {
         $error = 'Invalid payment method.';
 
     } else {
 
         $amount = (float)$amount;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Insert Expense
-        |--------------------------------------------------------------------------
-        */
 
         $stmt = $pdo->prepare("
             INSERT INTO expenses
@@ -88,38 +58,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
 
         $stmt->execute([
-
             ':expense_date' => $expenseDate,
-
             ':category' => $category,
-
             ':description' => $description,
-
             ':amount' => $amount,
-
             ':payment_method' => $paymentMethod
-
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
-        | Redirect
+        | Notify Other Active Users
         |--------------------------------------------------------------------------
         */
+
+        notifyOtherUsers(
+            'New Farm Expense Recorded',
+            sprintf(
+                '%s recorded a new %s expense of %s: %s.',
+                $_SESSION['full_name'] ?? 'A user',
+                $category,
+                money($amount),
+                $description
+            ),
+            'expense',
+            'index.php'
+        );
 
         header('Location: index.php?added=1');
         exit;
     }
 }
 
-
 $pageTitle = 'Add Expense';
 
 require_once __DIR__ . '/../includes/header.php';
-
 ?>
-
 
 <div class="page-header">
 
@@ -132,7 +105,6 @@ require_once __DIR__ . '/../includes/header.php';
         </p>
 
     </div>
-
 
     <div>
 
@@ -168,13 +140,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="dashboard-card">
 
-    <form
-        method="POST"
-        action=""
-    >
-
-
-        <!-- Expense Date -->
+    <form method="POST" action="">
 
         <div class="form-group">
 
@@ -195,9 +161,6 @@ require_once __DIR__ . '/../includes/header.php';
 
         </div>
 
-
-
-        <!-- Category -->
 
         <div class="form-group">
 
@@ -258,9 +221,6 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
 
 
-
-        <!-- Description -->
-
         <div class="form-group">
 
             <label for="description">
@@ -282,9 +242,6 @@ require_once __DIR__ . '/../includes/header.php';
 
         </div>
 
-
-
-        <!-- Amount -->
 
         <div class="form-group">
 
@@ -308,9 +265,6 @@ require_once __DIR__ . '/../includes/header.php';
 
         </div>
 
-
-
-        <!-- Payment Method -->
 
         <div class="form-group">
 
@@ -344,9 +298,6 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
 
 
-
-        <!-- Buttons -->
-
         <div
             style="
                 display:flex;
@@ -362,7 +313,6 @@ require_once __DIR__ . '/../includes/header.php';
             >
                 💾 Save Expense
             </button>
-
 
             <a
                 href="index.php"

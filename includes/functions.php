@@ -265,3 +265,188 @@ function number(int|float $value): string
         (float)$value
     );
 }
+/*
+|--------------------------------------------------------------------------
+| Notifications
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Send a notification to another user.
+ *
+ * The current user is excluded automatically.
+ */
+require_once __DIR__ . '/push.php';
+function notifyOtherUsers(
+    string $title,
+    string $message,
+    string $type = 'info',
+    ?string $relatedUrl = null
+): void {
+
+    global $pdo;
+
+    $currentUserId = currentUserId();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO notifications
+        (
+            user_id,
+            title,
+            message,
+            type,
+            related_url
+        )
+        SELECT
+            id,
+            ?,
+            ?,
+            ?,
+            ?
+        FROM users
+        WHERE status = 'active'
+        AND id != ?
+    ");
+
+        $stmt->execute([
+        $title,
+        $message,
+        $type,
+        $relatedUrl,
+        $currentUserId ?? 0
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Send Push Notification
+    |--------------------------------------------------------------------------
+    */
+
+    sendPushToOtherUsers(
+        $title,
+        $message,
+        $type,
+        $relatedUrl
+    );
+}
+
+
+/**
+ * Get the number of unread notifications
+ * for the current user.
+ */
+function unreadNotificationCount(): int
+{
+    global $pdo;
+
+    $userId = currentUserId();
+
+    if (!$userId) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM notifications
+        WHERE user_id = ?
+        AND is_read = 0
+    ");
+
+    $stmt->execute([
+        $userId
+    ]);
+
+    return (int) $stmt->fetchColumn();
+}
+
+
+/**
+ * Get recent notifications
+ * for the current user.
+ */
+function getRecentNotifications(int $limit = 10): array
+{
+    global $pdo;
+
+    $userId = currentUserId();
+
+    if (!$userId) {
+        return [];
+    }
+
+    $limit = max(1, min($limit, 50));
+
+    $stmt = $pdo->prepare("
+        SELECT
+            id,
+            title,
+            message,
+            type,
+            related_url,
+            is_read,
+            created_at
+        FROM notifications
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT {$limit}
+    ");
+
+    $stmt->execute([
+        $userId
+    ]);
+
+    return $stmt->fetchAll();
+}
+
+
+/**
+ * Mark one notification as read.
+ */
+function markNotificationAsRead(int $notificationId): bool
+{
+    global $pdo;
+
+    $userId = currentUserId();
+
+    if (!$userId) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE notifications
+        SET is_read = 1
+        WHERE id = ?
+        AND user_id = ?
+    ");
+
+    return $stmt->execute([
+        $notificationId,
+        $userId
+    ]);
+}
+
+
+/**
+ * Mark all notifications as read.
+ */
+function markAllNotificationsAsRead(): bool
+{
+    global $pdo;
+
+    $userId = currentUserId();
+
+    if (!$userId) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE notifications
+        SET is_read = 1
+        WHERE user_id = ?
+        AND is_read = 0
+    ");
+
+    return $stmt->execute([
+        $userId
+    ]);
+}

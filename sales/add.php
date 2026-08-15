@@ -8,7 +8,7 @@ require_once __DIR__ . '/../includes/functions.php';
 
 requireLogin();
 
-$pageTitle = 'Record Egg Sale';
+$pageTitle = 'Record Crate Sale';
 
 $errors = [];
 
@@ -19,12 +19,6 @@ $unitPrice = '';
 $customerName = '';
 $paymentMethod = 'cash';
 $notes = '';
-
-/*
-|--------------------------------------------------------------------------
-| Load Poultry Batches
-|--------------------------------------------------------------------------
-*/
 
 $stmt = $pdo->query("
     SELECT
@@ -38,13 +32,6 @@ $stmt = $pdo->query("
 
 $batches = $stmt->fetchAll();
 
-
-/*
-|--------------------------------------------------------------------------
-| Save Sale
-|--------------------------------------------------------------------------
-*/
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $saleDate = trim($_POST['sale_date'] ?? '');
@@ -54,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customerName = trim($_POST['customer_name'] ?? '');
     $paymentMethod = trim($_POST['payment_method'] ?? 'cash');
     $notes = trim($_POST['notes'] ?? '');
-
 
     /*
     |--------------------------------------------------------------------------
@@ -66,12 +52,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Sale date is required.';
     }
 
-    if ($quantity === '' || !ctype_digit($quantity) || (int)$quantity <= 0) {
-        $errors[] = 'Quantity sold must be greater than zero.';
+    if (
+        $quantity === ''
+        || !ctype_digit($quantity)
+        || (int) $quantity <= 0
+    ) {
+        $errors[] = 'Number of crates sold must be greater than zero.';
     }
 
-    if ($unitPrice === '' || !is_numeric($unitPrice) || (float)$unitPrice <= 0) {
-        $errors[] = 'Unit price must be greater than zero.';
+    if (
+        $unitPrice === ''
+        || !is_numeric($unitPrice)
+        || (float) $unitPrice <= 0
+    ) {
+        $errors[] = 'Price per crate must be greater than zero.';
     }
 
     $allowedPaymentMethods = [
@@ -85,10 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Invalid payment method.';
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | Check Batch
+    | Validate Poultry Batch
     |--------------------------------------------------------------------------
     */
 
@@ -108,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
 
             $batchCheck->execute([
-                ':id' => (int)$batchId
+                ':id' => (int) $batchId
             ]);
 
             if (!$batchCheck->fetch()) {
@@ -116,7 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -132,15 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         && $unitPrice !== ''
         && is_numeric($unitPrice)
     ) {
-
         $totalAmount =
-            (int)$quantity * (float)$unitPrice;
+            (int) $quantity * (float) $unitPrice;
     }
-
 
     /*
     |--------------------------------------------------------------------------
-    | Insert Sale
+    | Save Crate Sale
     |--------------------------------------------------------------------------
     */
 
@@ -173,33 +163,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt->execute([
             ':sale_date' => $saleDate,
+
             ':batch_id' => $batchId !== ''
-                ? (int)$batchId
+                ? (int) $batchId
                 : null,
-            ':quantity' => (int)$quantity,
-            ':unit_price' => (float)$unitPrice,
+
+            /*
+             * IMPORTANT:
+             * The existing database column is still called
+             * "quantity", but it now represents CRATES SOLD.
+             */
+            ':quantity' => (int) $quantity,
+
+            ':unit_price' => (float) $unitPrice,
+
             ':total_amount' => $totalAmount,
+
             ':customer_name' => $customerName !== ''
                 ? $customerName
                 : null,
+
             ':payment_method' => $paymentMethod,
+
             ':notes' => $notes !== ''
                 ? $notes
                 : null,
-            ':recorded_by' => $_SESSION['user_id'] ?? null
-        ]);
 
+            ':recorded_by' => currentUserId()
+        ]);
 
         /*
         |--------------------------------------------------------------------------
-        | Success
+        | Notify Other Users
         |--------------------------------------------------------------------------
         */
 
-        header(
-            'Location: index.php?success=1'
-        );
+        if (function_exists('notifyOtherUsers')) {
 
+            notifyOtherUsers(
+                'New Crate Sale Recorded',
+                sprintf(
+                    '%s recorded a sale of %s crate%s for %s.',
+                    $_SESSION['full_name'] ?? 'A user',
+                    number((int) $quantity),
+                    (int) $quantity === 1 ? '' : 's',
+                    money($totalAmount)
+                ),
+                'sales',
+                'index.php'
+            );
+        }
+
+        header('Location: index.php?success=1');
         exit;
     }
 }
@@ -208,19 +223,20 @@ require_once __DIR__ . '/../includes/header.php';
 
 ?>
 
-
 <div class="page-header">
 
     <div>
 
-        <h2>➕ Record Egg Sale</h2>
+        <h2>
+            <i class="bi bi-plus-circle"></i>
+            Record Crate Sale
+        </h2>
 
         <p>
-            Record a new egg sale.
+            Record a new crate sale from the farm.
         </p>
 
     </div>
-
 
     <div>
 
@@ -228,7 +244,8 @@ require_once __DIR__ . '/../includes/header.php';
             href="index.php"
             class="btn btn-secondary"
         >
-            ← Back to Sales
+            <i class="bi bi-arrow-left"></i>
+            Back to Sales
         </a>
 
     </div>
@@ -274,7 +291,8 @@ require_once __DIR__ . '/../includes/header.php';
 
         <label for="sale_date">
 
-            📅 Sale Date
+            <i class="bi bi-calendar-event"></i>
+            Sale Date
 
         </label>
 
@@ -289,14 +307,14 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
 
-
     <!-- Poultry Batch -->
 
     <div class="form-group">
 
         <label for="batch_id">
 
-            🐔 Poultry Batch
+            <i class="bi bi-layers"></i>
+            Poultry Batch
 
         </label>
 
@@ -312,10 +330,10 @@ require_once __DIR__ . '/../includes/header.php';
             <?php foreach ($batches as $batch): ?>
 
                 <option
-                    value="<?= (int)$batch['id'] ?>"
+                    value="<?= (int) $batch['id'] ?>"
                     <?= (
-                        (string)$batchId ===
-                        (string)$batch['id']
+                        (string) $batchId ===
+                        (string) $batch['id']
                     )
                         ? 'selected'
                         : ''
@@ -333,7 +351,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                     (
                     <?= number(
-                        (int)$batch['current_quantity']
+                        (int) $batch['current_quantity']
                     ) ?>
                     birds
                     )
@@ -345,20 +363,20 @@ require_once __DIR__ . '/../includes/header.php';
         </select>
 
         <small>
-            Select the batch from which the eggs were sold.
+            Select the poultry batch associated with the eggs.
         </small>
 
     </div>
 
 
-
-    <!-- Quantity -->
+    <!-- Crates Sold -->
 
     <div class="form-group">
 
         <label for="quantity">
 
-            🥚 Quantity Sold
+            <i class="bi bi-box-seam"></i>
+            Crates Sold
 
         </label>
 
@@ -369,21 +387,25 @@ require_once __DIR__ . '/../includes/header.php';
             value="<?= e($quantity) ?>"
             min="1"
             step="1"
-            placeholder="Enter number of eggs"
+            placeholder="Enter number of crates"
             required
         >
+
+        <small>
+            Enter the number of crates sold.
+        </small>
 
     </div>
 
 
-
-    <!-- Unit Price -->
+    <!-- Price Per Crate -->
 
     <div class="form-group">
 
         <label for="unit_price">
 
-            💵 Unit Price
+            <i class="bi bi-currency-dollar"></i>
+            Price Per Crate
 
         </label>
 
@@ -394,16 +416,15 @@ require_once __DIR__ . '/../includes/header.php';
             value="<?= e($unitPrice) ?>"
             min="0.01"
             step="0.01"
-            placeholder="Enter price per egg"
+            placeholder="Enter price per crate"
             required
         >
 
         <small>
-            Enter the selling price for one egg.
+            Enter the selling price for one crate.
         </small>
 
     </div>
-
 
 
     <!-- Total Amount -->
@@ -412,7 +433,8 @@ require_once __DIR__ . '/../includes/header.php';
 
         <label for="total_amount">
 
-            💰 Total Amount
+            <i class="bi bi-cash-stack"></i>
+            Total Amount
 
         </label>
 
@@ -430,14 +452,14 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
 
-
     <!-- Customer -->
 
     <div class="form-group">
 
         <label for="customer_name">
 
-            👤 Customer Name
+            <i class="bi bi-person"></i>
+            Customer Name
 
         </label>
 
@@ -453,14 +475,14 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
 
-
     <!-- Payment Method -->
 
     <div class="form-group">
 
         <label for="payment_method">
 
-            💳 Payment Method
+            <i class="bi bi-credit-card"></i>
+            Payment Method
 
         </label>
 
@@ -510,14 +532,14 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
 
-
     <!-- Notes -->
 
     <div class="form-group">
 
         <label for="notes">
 
-            📝 Notes
+            <i class="bi bi-sticky"></i>
+            Notes
 
         </label>
 
@@ -525,11 +547,10 @@ require_once __DIR__ . '/../includes/header.php';
             id="notes"
             name="notes"
             rows="4"
-            placeholder="Optional notes about this sale"
+            placeholder="Optional notes about this crate sale"
         ><?= e($notes) ?></textarea>
 
     </div>
-
 
 
     <!-- Buttons -->
@@ -548,9 +569,9 @@ require_once __DIR__ . '/../includes/header.php';
             type="submit"
             class="btn btn-primary"
         >
-            💾 Save Egg Sale
+            <i class="bi bi-check-circle"></i>
+            Save Crate Sale
         </button>
-
 
         <a
             href="index.php"
@@ -562,7 +583,6 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
 </form>
-
 
 
 <script>
@@ -583,19 +603,17 @@ document.addEventListener(
 
         function calculateTotal() {
 
-            const qty =
+            const crates =
                 parseFloat(quantity.value) || 0;
 
             const price =
                 parseFloat(unitPrice.value) || 0;
 
             const total =
-                qty * price;
-
+                crates * price;
 
             totalAmount.value =
-                'GHS ' +
-                total.toFixed(2);
+                'GHS ' + total.toFixed(2);
         }
 
 
@@ -603,6 +621,7 @@ document.addEventListener(
             'input',
             calculateTotal
         );
+
 
         unitPrice.addEventListener(
             'input',

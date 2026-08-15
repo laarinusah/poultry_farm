@@ -45,6 +45,24 @@ require_once __DIR__ . '/../config/app.php';
         href="../public/assets/css/app.css"
     >
 
+    <!-- ==========================================================
+         VAPID PUBLIC KEY
+    =========================================================== -->
+
+    <script>
+        window.VAPID_PUBLIC_KEY =
+            <?= json_encode(VAPID_PUBLIC_KEY) ?>;
+    </script>
+
+    <!-- ==========================================================
+         PUSH NOTIFICATIONS
+    =========================================================== -->
+
+    <script
+        src="../public/assets/js/push-notifications.js"
+        defer
+    ></script>
+
 </head>
 
 <body>
@@ -72,15 +90,18 @@ require_once __DIR__ . '/../config/app.php';
             <!-- Mobile Menu Button -->
 
             <button
-    type="button"
-    class="menu-toggle"
-    id="menuToggle"
-    aria-label="Open navigation menu"
-    aria-expanded="false"
-    onclick="toggleMobileMenu()"
->
-        <i class="bi bi-list" aria-hidden="true"></i>
-              </button>
+                type="button"
+                class="menu-toggle"
+                id="menuToggle"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                onclick="toggleMobileMenu()"
+            >
+                <i
+                    class="bi bi-list"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
             <!-- Page Title -->
 

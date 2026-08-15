@@ -18,3 +18,9 @@ storage/cache/
 # Operating system
 .DS_Store
 Thumbs.db
+# Composer dependencies
+vendor/
+
+# Backup files
+*.bak
+*.bak2

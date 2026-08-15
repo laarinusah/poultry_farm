@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -110,13 +108,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 SELECT
                     id,
+                    batch_name,
                     current_quantity
                 FROM poultry_batches
                 WHERE id = ?
                 FOR UPDATE
             ");
 
-            $stmt->execute([$batchId]);
+            $stmt->execute([
+                $batchId
+            ]);
 
             $batch = $stmt->fetch();
 
@@ -208,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $quantity,
                 $reason !== '' ? $reason : null,
                 $notes !== '' ? $notes : null,
-                $_SESSION['user_id'] ?? null
+                currentUserId()
             ]);
 
 
@@ -242,12 +243,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             /*
             |--------------------------------------------------------------------------
-            | Commit
+            | Commit Transaction
             |--------------------------------------------------------------------------
             */
 
             $pdo->commit();
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | Notify Other Active Users
+            |--------------------------------------------------------------------------
+            |
+            | Notification is sent AFTER commit so users are notified
+            | only after the mortality record has actually been saved.
+            |
+            */
+
+            $reasonText =
+                $reason !== ''
+                    ? ' Reason: ' . $reason . '.'
+                    : '';
+
+            notifyOtherUsers(
+                'New Mortality Recorded',
+                sprintf(
+                    '%s recorded %d bird%s mortality in batch "%s" on %s.%s',
+                    $_SESSION['full_name'] ?? 'A user',
+                    $quantity,
+                    $quantity === 1 ? '' : 's',
+                    $batch['batch_name'],
+                    $mortalityDate,
+                    $reasonText
+                ),
+                'mortality',
+                'index.php'
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Redirect
+            |--------------------------------------------------------------------------
+            */
 
             redirect('index.php');
 

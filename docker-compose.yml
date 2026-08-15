@@ -1,0 +1,53 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: poultry_farm_app
+
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: poultry_farm
+      DB_USER: poultry_user
+      DB_PASSWORD: poultry_password
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+
+    ports:
+      - "8080:80"
+
+    volumes:
+      - ./:/var/www/html
+
+    restart: unless-stopped
+
+    depends_on:
+      - db
+
+    networks:
+      - poultry_network
+
+  db:
+    image: mysql:8.0
+
+    container_name: poultry_farm_db
+
+    environment:
+      MYSQL_DATABASE: poultry_farm
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: poultry_user
+      MYSQL_PASSWORD: poultry_password
+
+    volumes:
+      - poultry_db_data:/var/lib/mysql
+
+    networks:
+      - poultry_network
+
+networks:
+  poultry_network:
+
+volumes:
+  poultry_db_data:

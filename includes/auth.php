@@ -101,6 +101,7 @@ function currentUser(): ?array
         return null;
     }
 
+
     /*
     |--------------------------------------------------------------------------
     | Check Account Status
@@ -128,7 +129,9 @@ function currentUser(): ?array
 
         session_destroy();
 
-        redirect('/poultry_farm/auth/login.php?error=inactive');
+        redirect('/auth/login.php?error=inactive');
+
+        exit;
     }
 
     $user = $result;
@@ -147,10 +150,11 @@ function requireLogin(): void
 {
     if (!isLoggedIn()) {
 
-        redirect(
-            '/poultry_farm/auth/login.php'
-        );
+        redirect('/auth/login.php');
+
+        exit;
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -162,9 +166,9 @@ function requireLogin(): void
 
     if ($user === null) {
 
-        redirect(
-            '/poultry_farm/auth/login.php'
-        );
+        redirect('/auth/login.php');
+
+        exit;
     }
 }
 
