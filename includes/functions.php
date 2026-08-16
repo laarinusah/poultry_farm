@@ -272,11 +272,13 @@ function number(int|float $value): string
 */
 
 /**
- * Send a notification to another user.
+ * Send a notification to all active users.
  *
- * The current user is excluded automatically.
+ * The user who performed the action also receives
+ * the notification.
  */
 require_once __DIR__ . '/push.php';
+
 function notifyOtherUsers(
     string $title,
     string $message,
@@ -285,8 +287,6 @@ function notifyOtherUsers(
 ): void {
 
     global $pdo;
-
-    $currentUserId = currentUserId();
 
     $stmt = $pdo->prepare("
         INSERT INTO notifications
@@ -305,15 +305,13 @@ function notifyOtherUsers(
             ?
         FROM users
         WHERE status = 'active'
-        AND id != ?
     ");
 
-        $stmt->execute([
+    $stmt->execute([
         $title,
         $message,
         $type,
-        $relatedUrl,
-        $currentUserId ?? 0
+        $relatedUrl
     ]);
 
     /*
@@ -329,7 +327,6 @@ function notifyOtherUsers(
         $relatedUrl
     );
 }
-
 
 /**
  * Get the number of unread notifications

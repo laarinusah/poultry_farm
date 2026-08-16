@@ -23,7 +23,7 @@ function sendPushToOtherUsers(
 
     global $pdo;
 
-    $currentUserId = currentUserId();
+    
 
 
     /*
@@ -73,17 +73,6 @@ function sendPushToOtherUsers(
     ";
 
     $params = [];
-
-    if ($currentUserId) {
-
-        $sql .= "
-            AND ps.user_id != :current_user_id
-        ";
-
-        $params[':current_user_id'] =
-            $currentUserId;
-    }
-
 
     $stmt = $pdo->prepare($sql);
 
